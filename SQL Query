@@ -27,6 +27,7 @@ weekly_icu_admissions numeric (18,5),
 weekly_icu_admissions_per_million numeric (18,5),
 weekly_hosp_admissions numeric (18,5),
 weekly_hosp_admissions_per_million numeric (18,5))
+--Import the covid deaths.csv file to pgadmin after creating the above table.
 
 --Creating Table covid vaccinations
 CREATE TABLE public.covid_vaccinations
@@ -68,6 +69,7 @@ hospital_beds_per_thousand numeric (18,5),
 life_expectancy numeric (18,5),
 human_development_index numeric (18,5),
 excess_mortality numeric (18,5))
+--Import the covid vaccinations.csv file to pgadmin after creating the above table.
 
 SELECT * FROM covid_deaths
 ORDER BY location, date;
