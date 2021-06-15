@@ -1,0 +1,155 @@
+--Creating table covid deaths
+CREATE TABLE public.covid_deaths
+(
+iso_code VARCHAR (50),
+continent VARCHAR(50),
+location VARCHAR(50),
+Date	date,
+population numeric (18,0),
+total_cases	numeric (18,0),
+new_cases	numeric (18,5),
+new_cases_smoothed	numeric (18,5),
+total_deaths numeric (18,0),
+new_deaths numeric (18,5), 
+new_deaths_smoothed numeric (18,5),
+total_cases_per_million	numeric (18,5),
+new_cases_per_million numeric (18,5),
+new_cases_smoothed_per_million	numeric (18,5),
+total_deaths_per_million	numeric (18,5),
+new_deaths_per_million	numeric (18,5),
+new_deaths_smoothed_per_million	numeric (18,5),
+reproduction_rate numeric (18,5),
+icu_patients numeric (18,5),
+icu_patients_per_million numeric (18,5),
+hosp_patients numeric (18,5),
+hosp_patients_per_million numeric (18,5),
+weekly_icu_admissions numeric (18,5),
+weekly_icu_admissions_per_million numeric (18,5),
+weekly_hosp_admissions numeric (18,5),
+weekly_hosp_admissions_per_million numeric (18,5))
+
+--Creating Table covid vaccinations
+CREATE TABLE public.covid_vaccinations
+(iso_code VARCHAR(50),
+continent VARCHAR(50),
+location VARCHAR(50),
+DATE date,
+new_tests integer,
+total_tests integer,
+total_tests_per_thousand numeric (18,5),
+new_tests_per_thousand numeric (18,5),
+new_tests_smoothed integer,
+new_tests_smoothed_per_thousand numeric (18,5),
+positive_rate numeric (18,5),
+tests_per_case numeric (18,5),
+tests_units VARCHAR(50),
+total_vaccinations bigint,
+people_vaccinated integer,
+people_fully_vaccinated	integer,
+new_vaccinations integer,
+new_vaccinations_smoothed integer,
+total_vaccinations_per_hundred numeric (18,5),
+people_vaccinated_per_hundred numeric (18,5),
+people_fully_vaccinated_per_hundred	numeric (18,5),
+new_vaccinations_smoothed_per_million integer,
+stringency_index numeric (18,5),
+population_density numeric (18,5),
+median_age numeric (18,5),
+aged_65_older numeric (18,5),
+aged_70_older numeric (18,5),
+gdp_per_capita numeric (18,5),
+extreme_poverty numeric (18,5),
+cardiovasc_death_rate numeric (18,5),
+diabetes_prevalence	numeric (18,5),
+female_smokers numeric (18,5),
+male_smokers numeric (18,5),
+handwashing_facilities numeric (18,5),
+hospital_beds_per_thousand numeric (18,5),
+life_expectancy numeric (18,5),
+human_development_index numeric (18,5),
+excess_mortality numeric (18,5))
+
+SELECT * FROM covid_deaths
+ORDER BY location, date;
+
+SELECT * FROM covid_vaccinations
+ORDER BY location, date;
+
+--Select data that we are going to be using
+
+SELECT location, date, total_cases, new_cases, total_deaths, population FROM covid_deaths
+ORDER BY location, date;
+
+--Looking at Total Cases vs Total Deaths 
+--Shows the likelihood of dying from COVID if you contract the virus in the countries in this data set
+SELECT location, date, total_cases, total_deaths, 
+ROUND((total_deaths/total_cases)*100,2) AS deathrate
+FROM covid_deaths
+ORDER BY location, date;
+
+--Looking at the total cases vs population 
+SELECT location, date, total_cases, population, 
+ROUND((total_cases/population)*100,2) AS infectionrate
+FROM covid_deaths
+ORDER BY location, date;
+
+--Looking at countries with highest infection rate vs population
+SELECT location, population, MAX(total_cases) AS highestinfectioncount,
+MAX(ROUND((total_cases/population)*100,2)) AS highestinfectionrate FROM covid_deaths
+GROUP BY location, population
+ORDER BY highestinfectionrate DESC NULLS LAST;
+
+--Showing countries with the highest death count perpopulation
+SELECT location, MAX(total_deaths) AS highestdeathcount FROM covid_deaths
+WHERE continent IS NOT NULL
+GROUP BY location
+ORDER BY highestdeathcount DESC NULLS LAST;
+
+--Showing the continents with the highest death count
+SELECT continent, MAX(total_deaths) AS totaldeathcount FROM covid_deaths
+WHERE continent IS NOT NULL
+GROUP BY continent
+ORDER BY totaldeathcount DESC;
+
+--Global numbers by date
+SELECT date, SUM(new_cases) AS totalcases, SUM(new_deaths) AS totaldeaths,
+CASE WHEN SUM(new_cases) = 0 THEN NULL ELSE ROUND((SUM(new_deaths)/SUM(new_cases))*100,2) 
+END AS deathpercentage FROM covid_deaths
+WHERE continent IS NOT NULL
+GROUP BY date
+ORDER BY date;
+
+--Global numbers
+SELECT ROUND(SUM(new_cases),0) AS totalcases, ROUND(SUM(new_deaths),0) AS totaldeaths,
+ROUND((SUM(new_deaths)/SUM(new_cases))*100,2) AS deathpercentage FROM covid_deaths
+WHERE continent IS NOT NULL;
+
+--Looking at total population vs vaccinated population
+SELECT a.continent, a.location, a.date, a.population, b.new_vaccinations FROM covid_deaths AS a
+INNER JOIN covid_vaccinations AS b
+ON a.location = b.location AND a.date = b.date
+WHERE a.continent IS NOT NULL AND a.location = 'United Kingdom'
+ORDER BY a.continent, a.location, a.date;
+
+SELECT a.continent, a.location, a.date, a.population, b.new_vaccinations,
+SUM(b.new_vaccinations) OVER(PARTITION BY a.location ORDER BY a.date) AS rollingpeoplevaccinated
+FROM covid_deaths AS a
+INNER JOIN covid_vaccinations AS b
+ON a.location = b.location AND
+a.date = b.date
+WHERE a.continent IS NOT NULL
+ORDER BY a.location, a.date;
+
+CREATE VIEW percentpopulationvaccinated AS
+(SELECT a.continent, a.location, a.date, a.population, b.new_vaccinations,
+SUM(b.new_vaccinations) OVER(PARTITION BY a.location ORDER BY a.date) AS rollingpeoplevaccinated,
+ROUND((SUM(b.new_vaccinations) OVER(PARTITION BY a.location ORDER BY a.date)/a.population)*100,2)AS rollingpeoplevaccinatedpercentage
+FROM covid_deaths AS a
+INNER JOIN covid_vaccinations AS b
+ON a.location = b.location AND
+a.date = b.date
+WHERE a.continent IS NOT NULL
+ORDER BY a.location, a.date);
+
+
+
